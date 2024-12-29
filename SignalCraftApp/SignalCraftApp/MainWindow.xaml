@@ -6,10 +6,35 @@
         xmlns:local="clr-namespace:SignalCraftApp"
         mc:Ignorable="d"
         WindowState="Maximized"
-        WindowStyle="None"
-        ResizeMode="NoResize"
-        Height="450" Width="800">
+        Height="1080" Width="1920" Loaded="Window_Loaded" Closed="Window_Closed">
     <Grid>
-
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="600" />
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="1" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+                <RowDefinition Height="350"></RowDefinition>
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Камера: "/>
+                <ComboBox Name="CBCameras" Width="170"></ComboBox>
+                <Button Width="30" Height="30" Background="White" Name="BtnCamStartAndStop" Click="BtnCamStartAndStop_Click">
+                    <Image Source="/Resources/Icons/Start.png" Width="25" Height="25" Margin="0"></Image>
+                </Button>
+                <Button Width="30" Height="30" Background="White" Name="BtnSearchCameras" Click="BtnSearchCameras_Click">
+                    <Image Source="/Resources/Icons/Update.png" Width="25" Height="25" Margin="0"></Image>
+                </Button>
+                <Button Width="30" Height="30" Background="White" IsEnabled="False" Name="BtnDownload" Click="BtnDownload_Click">
+                    <Image Source="/Resources/Icons/Download.png" Width="25" Height="25" Margin="0"></Image>
+                </Button>
+            </StackPanel>
+            <Border Background="LightGray" CornerRadius="10" Grid.Row="1" Margin="5">
+                <Image Name="ImCamera" Grid.Row="1" Source="/Resources/Icons/Camera.png" Margin="0"></Image>
+            </Border>
+            <Image Source="/Resources/Board.jpeg" Grid.Row="2"></Image>
+        </Grid>
     </Grid>
 </Window>
