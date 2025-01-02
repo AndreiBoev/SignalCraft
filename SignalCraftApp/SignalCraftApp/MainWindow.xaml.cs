@@ -25,6 +25,8 @@ namespace SignalCraftApp
         private VideoCaptureDevice _videoSource;    // Устройство видеозахвата
         private SerialPort _port = new SerialPort(); // Com-порт
         private long _count; // Число полученных пакетов
+        private string _path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments,
+                Environment.SpecialFolderOption.Create) + @"\SignalCraftAppLogs\"; // Путь для сохранения
 
 
         public MainWindow()
@@ -81,6 +83,7 @@ namespace SignalCraftApp
             _count++;
             TBlockCount.Text = _count.ToString();
 
+
             try
             {
                 Packet packet = new Packet(data);
@@ -90,6 +93,11 @@ namespace SignalCraftApp
             catch (Exception ex)
             {
                 dataOut += " -> " + ex.Message + '\n';
+            }
+
+            using (StreamWriter sw = new StreamWriter(_path, true, System.Text.Encoding.Default))
+            {
+                sw.WriteLine(dataOut);
             }
 
             TBData.Text += dataOut;
@@ -128,7 +136,7 @@ namespace SignalCraftApp
         }
 
         // Обработчик нового кадра
-        private void videoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
+        private void videoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)   
         {
             var bitmap = eventArgs.Frame;
 
@@ -273,6 +281,14 @@ namespace SignalCraftApp
                     _port.BaudRate = int.Parse(CBSpeed.Text);
                     _port.Open();
                     (BtnAction.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(@"/Resources/Icons/Stop.png", UriKind.RelativeOrAbsolute));
+
+                    DirectoryInfo dirInfo = new DirectoryInfo(_path);
+                    if (!dirInfo.Exists)
+                    {
+                        dirInfo.Create();
+                    }
+                    _path += DateTime.Now.ToString("dd-MM-yyyy HH.mm.ss") + ".txt";
+
                     BtnSend.IsEnabled = true;
                     TBSend.IsEnabled = true;
                     CBSpeed.IsEnabled = false;

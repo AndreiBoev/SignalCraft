@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SignalCraftApp"
         mc:Ignorable="d"
-        WindowState="Maximized"
+        WindowState="Maximized" Title="SignalCraft" Icon="/Resources/logo.png"
         Height="1080" Width="1920" Loaded="Window_Loaded" Closed="Window_Closed">
     <Grid>
         <Grid.ColumnDefinitions>
