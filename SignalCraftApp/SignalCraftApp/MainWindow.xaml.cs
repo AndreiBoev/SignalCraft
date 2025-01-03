@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -87,7 +89,7 @@ namespace SignalCraftApp
             try
             {
                 Packet packet = new Packet(data);
-                
+
                 dataOut += " -> " + "OK" + '\n';
             }
             catch (Exception ex)
@@ -136,7 +138,7 @@ namespace SignalCraftApp
         }
 
         // Обработчик нового кадра
-        private void videoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)   
+        private void videoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
             var bitmap = eventArgs.Frame;
 
@@ -321,6 +323,52 @@ namespace SignalCraftApp
             _count = 0;
             TBlockCount.Text = "0";
             TBData.Clear();
+        }
+
+        private void BtnProg_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Button).Content.ToString() == "Arduino IDE")
+            {
+                // Получаем путь к папке "Program Files" в зависимости от архитектуры системы
+                string programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+                string arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
+
+                // Проверяем, существует ли файл
+                if (!File.Exists(arduinoIdePath))
+                {
+                    // Если не найден в "Program Files", проверяем в "Program Files (x86)"
+                    programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+                    arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
+                }
+
+                try
+                {
+                    // Проверяем, существует ли файл Arduino IDE
+                    if (File.Exists(arduinoIdePath))
+                    {
+                        // Создаем новый процесс
+                        Process process = new Process();
+                        process.StartInfo.FileName = arduinoIdePath;
+
+                        // Запускаем процесс
+                        process.Start();
+
+                        MessageBox.Show("Arduino IDE запущена.");
+                    }
+                    else
+                    {
+                        MessageBox.Show("Arduino IDE не найдена. Проверьте установку.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка при запуске Arduino IDE: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Данный функционал ещё не реализован.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

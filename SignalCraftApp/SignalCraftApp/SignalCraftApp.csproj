@@ -123,7 +123,7 @@
     <Resource Include="Resources\Icons\Update.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\Logo.png" />
+    <Resource Include="Resources\Logo.jpg" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

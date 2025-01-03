@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SignalCraftApp"
         mc:Ignorable="d"
-        WindowState="Maximized" Title="SignalCraft" Icon="/Resources/logo.png"
+        WindowState="Maximized" Title="SignalCraft" Icon="/Resources/Logo.jpg"
         Height="1080" Width="1920" Loaded="Window_Loaded" Closed="Window_Closed">
     <Grid>
         <Grid.ColumnDefinitions>
@@ -18,36 +18,48 @@
                 <RowDefinition Height="*"></RowDefinition>
                 <RowDefinition Height="auto"></RowDefinition>
             </Grid.RowDefinitions>
-            <GroupBox Grid.Row="0" Header="COM-порт">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Порт:"></TextBlock>
-                    <ComboBox Name="CBPorts"></ComboBox>
-                    <Button Background="White" Width="30" Height="30" Name="BtnUpdatePorts" Click="BtnUpdatePorts_Click">
-                        <Image Source="/Resources/Icons/Update.png" Margin="0" Width="25" Height="25"></Image>
-                    </Button>
-                    <TextBlock Text="Скорость:"></TextBlock>
-                    <ComboBox Name="CBSpeed" SelectedIndex="4">
-                        <ComboBoxItem Content="300"></ComboBoxItem>
-                        <ComboBoxItem Content="1200"></ComboBoxItem>
-                        <ComboBoxItem Content="2400"></ComboBoxItem>
-                        <ComboBoxItem Content="4800"></ComboBoxItem>
-                        <ComboBoxItem Content="9600"></ComboBoxItem>
-                        <ComboBoxItem Content="19200"></ComboBoxItem>
-                        <ComboBoxItem Content="38400"></ComboBoxItem>
-                        <ComboBoxItem Content="57600"></ComboBoxItem>
-                        <ComboBoxItem Content="74880"></ComboBoxItem>
-                        <ComboBoxItem Content="115200"></ComboBoxItem>
-                        <ComboBoxItem Content="230400"></ComboBoxItem>
-                        <ComboBoxItem Content="250000"></ComboBoxItem>
-                        <ComboBoxItem Content="500000"></ComboBoxItem>
-                        <ComboBoxItem Content="1000000"></ComboBoxItem>
-                        <ComboBoxItem Content="2000000"></ComboBoxItem>
-                    </ComboBox>
-                    <Button Name="BtnAction" Click="BtnAction_Click" Background="White" Height="30" Width="30">
-                        <Image Source="/Resources/Icons/Start.png" Width="25" Height="25" Margin="0"></Image>
-                    </Button>
-                </StackPanel>
-            </GroupBox>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                    <ColumnDefinition Width="auto"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <GroupBox Header="COM-порт" Grid.Column="0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Порт:"></TextBlock>
+                        <ComboBox Name="CBPorts"></ComboBox>
+                        <Button Background="White" Width="30" Height="30" Name="BtnUpdatePorts" Click="BtnUpdatePorts_Click">
+                            <Image Source="/Resources/Icons/Update.png" Margin="0" Width="25" Height="25"></Image>
+                        </Button>
+                        <TextBlock Text="Скорость:"></TextBlock>
+                        <ComboBox Name="CBSpeed" SelectedIndex="4">
+                            <ComboBoxItem Content="300"></ComboBoxItem>
+                            <ComboBoxItem Content="1200"></ComboBoxItem>
+                            <ComboBoxItem Content="2400"></ComboBoxItem>
+                            <ComboBoxItem Content="4800"></ComboBoxItem>
+                            <ComboBoxItem Content="9600"></ComboBoxItem>
+                            <ComboBoxItem Content="19200"></ComboBoxItem>
+                            <ComboBoxItem Content="38400"></ComboBoxItem>
+                            <ComboBoxItem Content="57600"></ComboBoxItem>
+                            <ComboBoxItem Content="74880"></ComboBoxItem>
+                            <ComboBoxItem Content="115200"></ComboBoxItem>
+                            <ComboBoxItem Content="230400"></ComboBoxItem>
+                            <ComboBoxItem Content="250000"></ComboBoxItem>
+                            <ComboBoxItem Content="500000"></ComboBoxItem>
+                            <ComboBoxItem Content="1000000"></ComboBoxItem>
+                            <ComboBoxItem Content="2000000"></ComboBoxItem>
+                        </ComboBox>
+                        <Button Name="BtnAction" Click="BtnAction_Click" Background="White" Height="30" Width="30">
+                            <Image Source="/Resources/Icons/Start.png" Width="25" Height="25" Margin="0"></Image>
+                        </Button>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox Grid.Column="1" Header="Среды разработки">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Quartus Prime" Click="BtnProg_Click"></Button>
+                        <Button Content="Arduino IDE" Click="BtnProg_Click"></Button>
+                    </StackPanel>
+                </GroupBox>
+            </Grid>
             <GroupBox Grid.Row="2" Header="Лог-журнал">
                 <StackPanel Grid.Row="2">
                     <TextBox HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Name="TBData" IsReadOnly="True" Height="100" Margin="5 5 5 0"></TextBox>
