@@ -1,15 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 
 using AForge.Video;
@@ -29,11 +33,18 @@ namespace SignalCraftApp
         private long _count; // Число полученных пакетов
         private string _path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments,
                 Environment.SpecialFolderOption.Create) + @"\SignalCraftAppLogs\"; // Путь для сохранения
+        private List<Pin> _pins = new List<Pin>(); // Список пинов выбранной платы
+        private Pin _currentPin; // Выбранный пин
 
+
+        private const string CameraImagePath = @"/Resources/Icons/Camera.png";
+        private const string StartImagePath = @"/Resources/Icons/Start.png";
+        private const string StopImagePath = @"/Resources/Icons/Stop.png";
 
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = _currentPin;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -44,6 +55,28 @@ namespace SignalCraftApp
             // Загрузка com-портов
             BtnUpdatePorts_Click(null, null);
             _port.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+
+            // Проверка существования директории для логов
+            DirectoryInfo dirInfo = new DirectoryInfo(_path);
+            if (!dirInfo.Exists)
+            {
+                dirInfo.Create();
+            }
+
+            // Добавление пинов в таблицу
+            for (int i = 0; i < 36; i++)
+            {
+                Pin pin = new Pin()
+                {
+                    Id = i,
+                    Name = $"GPIO_[{i}]",
+                    Type = "Не задан",
+                    Value = "Не задано"
+                };
+                _pins.Add(pin);
+            }
+            DGPins.ItemsSource = _pins;
+
         }
 
 
@@ -72,37 +105,24 @@ namespace SignalCraftApp
 
         private void ProcessReceivedData(string data)
         {
-            if (data.Length > 1)
-                data = data.Remove(data.Length - 1);
-
-            string dataOut;
-
-            if (CBTimeMark.IsChecked.Value)
-                dataOut = DateTime.Now.ToString("HH:mm:ss") + " -> " + data;
-            else
-                dataOut = data;
+            if (string.IsNullOrWhiteSpace(data))
+                return;
 
             _count++;
             TBlockCount.Text = _count.ToString();
 
+            data = data.TrimEnd();
 
             try
             {
                 Packet packet = new Packet(data);
-
-                dataOut += " -> " + "OK" + '\n';
+                Log(data, true, "OK");
             }
             catch (Exception ex)
             {
-                dataOut += " -> " + ex.Message + '\n';
+                Log(data, true, ex.Message);
             }
 
-            using (StreamWriter sw = new StreamWriter(_path, true, System.Text.Encoding.Default))
-            {
-                sw.WriteLine(dataOut);
-            }
-
-            TBData.Text += dataOut;
             if (CBAutoScroll.IsChecked.Value)
                 TBData.ScrollToEnd();
         }
@@ -137,6 +157,10 @@ namespace SignalCraftApp
             CBCameras.SelectedIndex = 0;
         }
 
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
+
         // Обработчик нового кадра
         private void videoSource_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
@@ -145,17 +169,23 @@ namespace SignalCraftApp
             // Конвертируем полученный кадр в BitmapImage для отображения в WPF
             Dispatcher.Invoke(() =>
             {
+                var hBitmap = bitmap.GetHbitmap();
+                try
+                {
+                    var bitmapSource = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                        hBitmap,
+                        IntPtr.Zero,
+                        System.Windows.Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
 
-                var bitmapSource = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                    bitmap.GetHbitmap(),
-                    IntPtr.Zero,
-                    System.Windows.Int32Rect.Empty,
-                    BitmapSizeOptions.FromEmptyOptions());
-
-                bitmap.Dispose();
-
-                // Отображаем видео в Image
-                ImCamera.Source = bitmapSource;
+                    // Отображаем видео в Image
+                    ImCamera.Source = bitmapSource;
+                }
+                finally
+                {
+                    // Освобождаем HBitmap
+                    DeleteObject(hBitmap);
+                }
             });
         }
 
@@ -164,20 +194,14 @@ namespace SignalCraftApp
             if (_videoSource != null && _videoSource.IsRunning)
             {
                 _videoSource.SignalToStop();
-                ImCamera.Source = new BitmapImage(new Uri(@"/Resources/Icons/Camera.png", UriKind.RelativeOrAbsolute));
-                (BtnCamStartAndStop.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(@"/Resources/Icons/Start.png", UriKind.RelativeOrAbsolute));
-                CBCameras.IsEnabled = true;
-                BtnSearchCameras.IsEnabled = true;
-                BtnDownload.IsEnabled = false;
+                Thread.Sleep(500); // камера не успевает выключиться перед обновлением интерфейса 
+                UpdateUI();
                 return;
             }
-            CBCameras.IsEnabled = false;
-            BtnSearchCameras.IsEnabled = false;
-            BtnDownload.IsEnabled = true;
-            (BtnCamStartAndStop.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(@"/Resources/Icons/Stop.png", UriKind.RelativeOrAbsolute));
             _videoSource = new VideoCaptureDevice(_videoDevices[CBCameras.SelectedIndex].MonikerString);
             _videoSource.NewFrame += new NewFrameEventHandler(videoSource_NewFrame);
             _videoSource.Start();
+            UpdateUI();
         }
 
         private void BtnDownload_Click(object sender, RoutedEventArgs e)
@@ -198,7 +222,7 @@ namespace SignalCraftApp
 
                     // Определяем формат файла
                     BitmapEncoder encoder;
-                    switch (Path.GetExtension(filePath).ToLower())
+                    switch (System.IO.Path.GetExtension(filePath).ToLower())
                     {
                         case ".jpg":
                             encoder = new JpegBitmapEncoder();
@@ -233,9 +257,21 @@ namespace SignalCraftApp
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            // Выключаем камеру, если она не выключена
-            if (_videoSource != null)
-                BtnCamStartAndStop_Click(null, null);
+            try
+            {
+                _port.Close();
+
+                // Выключаем камеру, если она не выключена
+                if (_videoSource != null && _videoSource.IsRunning)
+                    BtnCamStartAndStop_Click(null, null);
+
+                Log("End", false);
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message, false);
+            }
+
         }
 
         private void BtnUpdatePorts_Click(object sender, RoutedEventArgs e)
@@ -262,7 +298,7 @@ namespace SignalCraftApp
             if (_port.IsOpen)
             {
                 _port.Write(TBSend.Text);
-                TBData.Text += TBSend.Text + '\n';
+                Log(TBSend.Text, false);
                 TBSend.Clear();
             }
         }
@@ -279,23 +315,14 @@ namespace SignalCraftApp
             {
                 try
                 {
+                    _path += DateTime.Now.ToString("dd-MM-yyyy HH.mm.ss") + ".txt";
+
                     _port.PortName = CBPorts.Text;
                     _port.BaudRate = int.Parse(CBSpeed.Text);
                     _port.Open();
-                    (BtnAction.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(@"/Resources/Icons/Stop.png", UriKind.RelativeOrAbsolute));
+                    (BtnAction.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StopImagePath, UriKind.RelativeOrAbsolute));
 
-                    DirectoryInfo dirInfo = new DirectoryInfo(_path);
-                    if (!dirInfo.Exists)
-                    {
-                        dirInfo.Create();
-                    }
-                    _path += DateTime.Now.ToString("dd-MM-yyyy HH.mm.ss") + ".txt";
-
-                    BtnSend.IsEnabled = true;
-                    TBSend.IsEnabled = true;
-                    CBSpeed.IsEnabled = false;
-                    CBPorts.IsEnabled = false;
-                    BtnUpdatePorts.IsEnabled = false;
+                    UpdateUI();
                 }
                 catch (Exception ex)
                 {
@@ -306,16 +333,44 @@ namespace SignalCraftApp
             else
             {
                 _port.Close();
-                (BtnAction.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(@"/Resources/Icons/Start.png", UriKind.RelativeOrAbsolute));
+                (BtnAction.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StartImagePath, UriKind.RelativeOrAbsolute));
                 TBData.Clear();
-                BtnSend.IsEnabled = false;
-                TBSend.IsEnabled = false;
-                CBSpeed.IsEnabled = true;
-                CBPorts.IsEnabled = true;
-                BtnUpdatePorts.IsEnabled = true;
+                UpdateUI();
                 TBlockCount.Text = "0";
                 _count = 0;
             }
+        }
+
+        private void UpdateUI()
+        {
+            BtnAction.Background = new SolidColorBrush(_port.IsOpen ? System.Windows.Media.Colors.LightGreen : System.Windows.Media.Colors.White);
+            CBSpeed.IsEnabled = !_port.IsOpen;
+            CBPorts.IsEnabled = !_port.IsOpen;
+            BtnUpdatePorts.IsEnabled = !_port.IsOpen;
+            GBGeneration.IsEnabled = _port.IsOpen;
+
+
+
+            if (_videoSource != null)
+            {
+                CBCameras.IsEnabled = !_videoSource.IsRunning;
+                BtnSearchCameras.IsEnabled = !_videoSource.IsRunning;
+                BtnDownload.IsEnabled = _videoSource.IsRunning;
+            }
+
+            if (_videoSource != null && _videoSource.IsRunning)
+            {
+                BtnCamStartAndStop.Background = new SolidColorBrush(System.Windows.Media.Colors.LightGreen);
+                (BtnCamStartAndStop.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StopImagePath, UriKind.RelativeOrAbsolute));
+            }
+            else
+            {
+                (BtnCamStartAndStop.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StartImagePath, UriKind.RelativeOrAbsolute));
+                BtnCamStartAndStop.Background = new SolidColorBrush(System.Windows.Media.Colors.White);
+                ImCamera.Source = new BitmapImage(new Uri(CameraImagePath, UriKind.RelativeOrAbsolute));
+            }
+
+
         }
 
         private void BtnClear_Click(object sender, RoutedEventArgs e)
@@ -331,14 +386,14 @@ namespace SignalCraftApp
             {
                 // Получаем путь к папке "Program Files" в зависимости от архитектуры системы
                 string programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-                string arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
+                string arduinoIdePath = System.IO.Path.Combine(programFilesPath, "Arduino", "arduino.exe");
 
                 // Проверяем, существует ли файл
                 if (!File.Exists(arduinoIdePath))
                 {
                     // Если не найден в "Program Files", проверяем в "Program Files (x86)"
                     programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-                    arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
+                    arduinoIdePath = System.IO.Path.Combine(programFilesPath, "Arduino", "arduino.exe");
                 }
 
                 try
@@ -369,6 +424,96 @@ namespace SignalCraftApp
             {
                 MessageBox.Show("Данный функционал ещё не реализован.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void BtnFullScreen_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("Данный функционал ещё не реализован.");
+        }
+
+        private void DGPins_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            _currentPin = DGPins.SelectedItem as Pin;
+            UpdatePinUI();
+        }
+
+        private void BtnBinary_Click(object sender, RoutedEventArgs e)
+        {
+            _currentPin.Type = "Дискретный";
+            _currentPin.Value = (sender as Button).Content.ToString();
+
+            int curPinInd = _pins.IndexOf(_currentPin);
+            _pins[curPinInd].Type = _currentPin.Type;
+            _pins[curPinInd].Value = _currentPin.Value;
+
+            DGPins.ItemsSource = null;
+            DGPins.ItemsSource = _pins;
+            DGPins.SelectedIndex = curPinInd;
+
+            UpdatePinUI();
+        }
+
+        private void UpdatePinUI()
+        {
+            DataContext = null;
+            DataContext = _currentPin;
+        }
+
+        private void Log(string message, bool direction, string status = "")
+        {
+            message.TrimEnd();
+
+            if (direction)
+                message = DateTime.Now.ToString("HH:mm:ss") + " <- " + message;
+            else
+                message = DateTime.Now.ToString("HH:mm:ss") + " -> " + message;
+
+            if (!string.IsNullOrEmpty(status))
+                message += " -> " + status;
+
+            TBData.Text += message + '\n';
+
+            if (File.Exists(_path))
+            {
+                using (var writer = new StreamWriter(_path, true))
+                {
+                    writer.WriteLineAsync(message);
+                }
+            }
+        }
+
+        private string SendPacket(Packet packet)
+        {
+            try
+            {
+                _port.WriteLine(packet.ToString());
+                return "OK";
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+        private void BtnSet_Click(object sender, RoutedEventArgs e)
+        {
+            byte[] data = new byte[5];
+
+            foreach (Pin pin in _pins)
+            {
+                if (pin.Type == "Дискретный" && pin.Value == "1")
+                {
+                    int byteIndex = pin.Id / 8; // Номер байта (0-4)
+                    int bitIndex = pin.Id % 8;   // Номер бита внутри байта (0-7)
+
+                    data[byteIndex] |= (byte)(1 << bitIndex);
+                }
+            }
+
+            Packet packet = new Packet(0x01, 0x00, 0x00, data);
+
+            string res = SendPacket(packet);
+            Log(packet.ToString(), false, res);
         }
     }
 }
