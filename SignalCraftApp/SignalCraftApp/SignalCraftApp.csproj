@@ -89,6 +89,9 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Components\CameraManager.cs" />
+    <Compile Include="Components\LogManager.cs" />
+    <Compile Include="Components\SerialManager.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
