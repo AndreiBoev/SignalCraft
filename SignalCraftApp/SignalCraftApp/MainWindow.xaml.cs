@@ -1,149 +1,122 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-
 namespace SignalCraftApp
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
-        private long _count; // Число полученных пакетов
-
-        private List<Pin> _pins = new List<Pin>(); // Список пинов выбранной платы
-        private Pin _currentPin; // Выбранный пин
-
+        private long _count;
+        private List<Pin> _pins;
+        private Pin _currentPin;
+        private List<Pin> _queuePost = new List<Pin>();
 
         private const string CameraImagePath = @"/Resources/Icons/Camera.png";
         private const string StartImagePath = @"/Resources/Icons/Start.png";
         private const string StopImagePath = @"/Resources/Icons/Stop.png";
 
-
         private LogManager _logManager;
         private SerialManager _serialManager = new SerialManager();
         private CameraManager _cameraManager;
-
 
         public MainWindow()
         {
             InitializeComponent();
             DataContext = _currentPin;
-
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Загрузка доступных камеры
             _cameraManager = new CameraManager(CBCameras);
-
-            // Загрузка com-портов
             BtnUpdatePorts_Click(null, null);
             _serialManager.DataReceived += DataReceivedHandler;
 
-            // Добавление пинов в таблицу
-            for (int i = 0; i < 36; i++)
-            {
-                Pin pin = new Pin()
-                {
-                    Id = i,
-                    Name = $"GPIO_[{i}]",
-                    Type = "Не задан",
-                    Value = "Не задано"
-                };
-                _pins.Add(pin);
-            }
-            DGPins.ItemsSource = _pins;
+            CBType.ItemsSource = Enum.GetValues(typeof(SignalType)).Cast<SignalType>().Skip(1).ToList();
 
+            // Инициализация пинов для платы DE10-Lite
+            string jsonPath = @"Configurations\DE10Lite.json";
+            string jsonContent = File.ReadAllText(jsonPath);
+            _pins = JsonConvert.DeserializeObject<List<Pin>>(jsonContent);
+            CBType_SelectionChanged(null, null);
         }
-
-
 
         private void Window_Closed(object sender, EventArgs e)
         {
             try
             {
                 _serialManager.CloseSerialPort();
-
                 _cameraManager.StopCamera();
-
-                if (_logManager != null)
-                    _logManager.CloseLogFile();
+                _logManager?.CloseLogFile();
             }
             catch (Exception ex)
             {
-                if (_logManager != null)
-                {
-                    _logManager.Log(ex.Message, false);
-                    _logManager.CloseLogFile();
-                }
+                _logManager?.Log(ex.Message, false);
+                _logManager?.CloseLogFile();
             }
-
         }
-
 
         private void UpdateUI()
         {
             bool isOpenPort = _serialManager.IsOpen();
+            bool isRunningCamera = _cameraManager.IsRunning();
 
-            BtnAction.Background = new SolidColorBrush(isOpenPort ? System.Windows.Media.Colors.LightGreen : System.Windows.Media.Colors.White);
+            BtnAction.Background = new SolidColorBrush(isOpenPort ? Colors.LightGreen : Colors.White);
             CBSpeed.IsEnabled = !isOpenPort;
             CBPorts.IsEnabled = !isOpenPort;
             BtnUpdatePorts.IsEnabled = !isOpenPort;
             GBGeneration.IsEnabled = isOpenPort;
 
-            bool isRunningCamera = _cameraManager.IsRunning();
-
-
             CBCameras.IsEnabled = !isRunningCamera;
             BtnSearchCameras.IsEnabled = !isRunningCamera;
             BtnDownload.IsEnabled = isRunningCamera;
 
-            if (isRunningCamera)
+            UpdateButtonState(BtnCamStartAndStop, isRunningCamera, StartImagePath, StopImagePath);
+            if (!isRunningCamera)
             {
-                BtnCamStartAndStop.Background = new SolidColorBrush(System.Windows.Media.Colors.LightGreen);
-                (BtnCamStartAndStop.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StopImagePath, UriKind.RelativeOrAbsolute));
-            }
-            else
-            {
-                (BtnCamStartAndStop.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StartImagePath, UriKind.RelativeOrAbsolute));
-                BtnCamStartAndStop.Background = new SolidColorBrush(System.Windows.Media.Colors.White);
                 ImCamera.Source = new BitmapImage(new Uri(CameraImagePath, UriKind.RelativeOrAbsolute));
             }
-
-
         }
 
-
+        private void UpdateButtonState(Button button, bool isActive, string startImagePath, string stopImagePath)
+        {
+            button.Background = new SolidColorBrush(isActive ? Colors.LightGreen : Colors.White);
+            (button.Content as Image).Source = new BitmapImage(new Uri(isActive ? stopImagePath : startImagePath, UriKind.RelativeOrAbsolute));
+        }
 
         private void DGPins_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _currentPin = DGPins.SelectedItem as Pin;
             UpdatePinUI();
+
+            if (_currentPin != null && _currentPin.Value != "")
+                SAnalog.Value = int.Parse(_currentPin.Value);
+            else
+                SAnalog.Value = 0;
         }
 
         private void BtnBinary_Click(object sender, RoutedEventArgs e)
         {
-            _currentPin.Type = "Дискретный";
+            if(_currentPin == null)
+            {
+                DGPins.SelectedIndex = 0;
+            }
+            _currentPin.SelectedType = SignalType.Digital;
             _currentPin.Value = (sender as Button).Content.ToString();
 
-            int curPinInd = _pins.IndexOf(_currentPin);
-            _pins[curPinInd].Type = _currentPin.Type;
-            _pins[curPinInd].Value = _currentPin.Value;
-
-            DGPins.ItemsSource = null;
-            DGPins.ItemsSource = _pins;
-            DGPins.SelectedIndex = curPinInd;
-
+            PushPin();
+            UpdateDGPins();
             UpdatePinUI();
         }
 
@@ -155,6 +128,8 @@ namespace SignalCraftApp
 
         private string SendPacket(Packet packet)
         {
+            if (CBAutoScroll.IsChecked.Value)
+                TBData.ScrollToEnd();
             try
             {
                 _serialManager.SendData(packet.ToString());
@@ -164,31 +139,74 @@ namespace SignalCraftApp
             {
                 return ex.Message;
             }
+
         }
 
         private void BtnSet_Click(object sender, RoutedEventArgs e)
         {
-            byte[] data = new byte[5];
+            BtnSet.IsEnabled = false;
 
-            foreach (Pin pin in _pins)
+            // Дискретный сигнал
+            var digitalPins = _queuePost.Where(p => p.SelectedType == SignalType.Digital);
+            if (digitalPins != null && digitalPins.Any())
             {
-                if (pin.Type == "Дискретный" && pin.Value == "1")
-                {
-                    int byteIndex = pin.Id / 8; // Номер байта (0-4)
-                    int bitIndex = pin.Id % 8;   // Номер бита внутри байта (0-7)
+                byte[] data = new byte[5];
 
+                foreach (Pin pin in digitalPins)
+                {
+                    int byteIndex = pin.Id / 8;
+                    int bitIndex = pin.Id % 8;
                     data[byteIndex] |= (byte)(1 << bitIndex);
+                }
+
+                Packet digitalPacket = new Packet(0x01, 0x00, 0x00, data);
+                string res = SendPacket(digitalPacket);
+                _logManager.Log(digitalPacket.ToString(), false, res);
+            }
+
+            // Аналоговый сигнал
+            var analogPins = _queuePost.Where(p => p.SelectedType == SignalType.Analog);
+            if (analogPins != null && analogPins.Any())
+            {
+                foreach (Pin pin in analogPins)
+                {
+                    ushort analogValue = ushort.Parse(pin.Value);
+                    byte[] analogBytes = BitConverter.GetBytes(analogValue);
+                    if (BitConverter.IsLittleEndian)
+                    {
+                        Array.Reverse(analogBytes);
+                    }
+
+                    byte[] data = new byte[3];
+                    data[0] = (byte)pin.Id; 
+                    data[1] = analogBytes[0];
+                    data[2] = analogBytes[1];
+
+                    Packet analogPacket = new Packet(0x03, 0x00, 0x00, data);
+                    string res = SendPacket(analogPacket);
+                    _logManager.Log(analogPacket.ToString(), false, res);
                 }
             }
 
-            Packet packet = new Packet(0x01, 0x00, 0x00, data);
+            // ШИМ сигнал
+            var pwmPins = _queuePost.Where(p => p.SelectedType == SignalType.PWM);
+            if (pwmPins != null && pwmPins.Any())
+            {
+                foreach (Pin pin in pwmPins)
+                {
+                    byte pwmValue = byte.Parse(pin.Value.TrimEnd('%'));
+                    byte[] data = new byte[2];
+                    data[0] = (byte)pin.Id;
+                    data[1] = pwmValue;
+                    Packet pwmPacket = new Packet(0x02, 0x00, 0x00, data);
+                    string res = SendPacket(pwmPacket);
+                    _logManager.Log(pwmPacket.ToString(), false, res);
+                }
+            }
 
-            string res = SendPacket(packet);
-
-            _logManager.Log(packet.ToString(), false, res);
+            _queuePost.Clear();
+            BtnSet.IsEnabled = true;
         }
-
-        #region ComRegion
 
         private void ProcessReceivedData(string data)
         {
@@ -213,24 +231,28 @@ namespace SignalCraftApp
             if (CBAutoScroll.IsChecked.Value)
                 TBData.ScrollToEnd();
         }
+
         private void BtnUpdatePorts_Click(object sender, RoutedEventArgs e)
         {
             _serialManager.UpdatePortNames(CBPorts);
         }
+
         private void BtnSend_Click(object sender, RoutedEventArgs e)
         {
-            if (_serialManager.IsOpen())
+            if (_serialManager.IsOpen() && TBSend.Text != "")
             {
                 _serialManager.SendData(TBSend.Text);
                 _logManager.Log(TBSend.Text, false);
                 TBSend.Clear();
             }
         }
-        private void TBSend_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+
+        private void TBSend_KeyUp(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
                 BtnSend_Click(null, null);
         }
+
         private void BtnAction_Click(object sender, RoutedEventArgs e)
         {
             if (!_serialManager.IsOpen())
@@ -239,15 +261,14 @@ namespace SignalCraftApp
 
                 if (_serialManager.InitializeSerialPort(CBPorts.Text, int.Parse(CBSpeed.Text)))
                 {
-                    (BtnAction.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StopImagePath, UriKind.RelativeOrAbsolute));
-
+                    UpdateButtonState(BtnAction, true, StartImagePath, StopImagePath);
                     UpdateUI();
                 }
             }
             else
             {
                 _serialManager.CloseSerialPort();
-                (BtnAction.Content as System.Windows.Controls.Image).Source = new BitmapImage(new Uri(StartImagePath, UriKind.RelativeOrAbsolute));
+                UpdateButtonState(BtnAction, false, StartImagePath, StopImagePath);
                 _logManager.CloseLogFile();
 
                 UpdateUI();
@@ -255,30 +276,25 @@ namespace SignalCraftApp
                 _count = 0;
             }
         }
+
         private void BtnClear_Click(object sender, RoutedEventArgs e)
         {
             _count = 0;
             TBlockCount.Text = "0";
             TBData.Clear();
         }
+
         private void DataReceivedHandler(object sender, string data)
         {
-            // Обновление UI должно происходить в UI-потоке
-            Dispatcher.Invoke(() =>
-            {
-                ProcessReceivedData(data);
-            });
+            Dispatcher.Invoke(() => ProcessReceivedData(data));
         }
-        #endregion
-
-        #region CameraRegion
 
         private void BtnCamStartAndStop_Click(object sender, RoutedEventArgs e)
         {
             if (_cameraManager.IsRunning())
             {
                 _cameraManager.StopCamera();
-                Thread.Sleep(500); // камера не успевает выключиться перед обновлением интерфейса 
+                Thread.Sleep(500);
                 UpdateUI();
                 return;
             }
@@ -286,12 +302,12 @@ namespace SignalCraftApp
             _cameraManager.StartCamera(CBCameras.SelectedIndex, ImCamera);
             UpdateUI();
         }
-        private void BtnDownload_Click(object sender, RoutedEventArgs e)
+
+        private async void BtnDownload_Click(object sender, RoutedEventArgs e)
         {
             if (ImCamera.Source is BitmapSource bitmapSource)
             {
-                // Открываем диалоговое окно сохранения файла
-                System.Windows.Forms.SaveFileDialog saveFileDialog = new System.Windows.Forms.SaveFileDialog
+                var saveFileDialog = new System.Windows.Forms.SaveFileDialog
                 {
                     Filter = "PNG Files (*.png)|*.png|JPEG Files (*.jpg)|*.jpg|Bitmap Files (*.bmp)|*.bmp",
                     DefaultExt = ".png",
@@ -301,31 +317,15 @@ namespace SignalCraftApp
                 if (saveFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                 {
                     string filePath = saveFileDialog.FileName;
+                    BitmapEncoder encoder = GetEncoder(filePath);
 
-                    // Определяем формат файла
-                    BitmapEncoder encoder;
-                    switch (System.IO.Path.GetExtension(filePath).ToLower())
-                    {
-                        case ".jpg":
-                            encoder = new JpegBitmapEncoder();
-                            break;
-                        case ".bmp":
-                            encoder = new BmpBitmapEncoder();
-                            break;
-                        default:
-                            encoder = new PngBitmapEncoder();
-                            break;
-                    }
-
-                    // Добавляем кадр с изображением
                     encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
 
-                    // Сохраняем файл
                     try
                     {
                         using (FileStream fileStream = new FileStream(filePath, FileMode.Create))
                         {
-                            encoder.Save(fileStream);
+                            await Task.Run(() => encoder.Save(fileStream));
                         }
                         MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
@@ -336,43 +336,36 @@ namespace SignalCraftApp
                 }
             }
         }
+
+        private BitmapEncoder GetEncoder(string filePath)
+        {
+            switch (Path.GetExtension(filePath).ToLower())
+            {
+                case ".jpg":
+                    return new JpegBitmapEncoder();
+                case ".bmp":
+                    return new BmpBitmapEncoder();
+                default:
+                    return new PngBitmapEncoder();
+            }
+        }
+
         private void BtnSearchCameras_Click(object sender, RoutedEventArgs e)
         {
             _cameraManager = new CameraManager(CBCameras);
         }
-        #endregion
-
-        #region Ещё не сделано
-
 
         private void BtnProg_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button).Content.ToString() == "Arduino IDE")
             {
-                // Получаем путь к папке "Program Files" в зависимости от архитектуры системы
-                string programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-                string arduinoIdePath = System.IO.Path.Combine(programFilesPath, "Arduino", "arduino.exe");
-
-                // Проверяем, существует ли файл
-                if (!File.Exists(arduinoIdePath))
-                {
-                    // Если не найден в "Program Files", проверяем в "Program Files (x86)"
-                    programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-                    arduinoIdePath = System.IO.Path.Combine(programFilesPath, "Arduino", "arduino.exe");
-                }
+                string arduinoIdePath = GetArduinoIdePath();
 
                 try
                 {
-                    // Проверяем, существует ли файл Arduino IDE
                     if (File.Exists(arduinoIdePath))
                     {
-                        // Создаем новый процесс
-                        Process process = new Process();
-                        process.StartInfo.FileName = arduinoIdePath;
-
-                        // Запускаем процесс
-                        process.Start();
-
+                        Process.Start(arduinoIdePath);
                         MessageBox.Show("Arduino IDE запущена.");
                     }
                     else
@@ -391,12 +384,122 @@ namespace SignalCraftApp
             }
         }
 
+        private string GetArduinoIdePath()
+        {
+            string programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
+
+            if (!File.Exists(arduinoIdePath))
+            {
+                programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+                arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
+            }
+
+            return arduinoIdePath;
+        }
+
         private void BtnFullScreen_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Данный функционал ещё не реализован.");
         }
 
-        #endregion
+        private void CBType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_pins != null && CBType.SelectedItem is SignalType selectedType)
+            {
+                var filteredPins = _pins.Where(pin => pin.SupportedSignals.Contains(selectedType)).ToList();
+                DGPins.ItemsSource = filteredPins;
 
+                switch (selectedType)
+                {
+                    case SignalType.Digital:
+                        GridDigital.Visibility = Visibility.Visible;
+                        GridAnalog.Visibility = Visibility.Collapsed;
+                        GridPWM.Visibility = Visibility.Collapsed;
+                        break;
+                    case SignalType.Analog:
+                        GridDigital.Visibility = Visibility.Collapsed;
+                        GridAnalog.Visibility = Visibility.Visible;
+                        GridPWM.Visibility = Visibility.Collapsed;
+
+                        // SAnalog_ValueChanged(null, null);
+                        break;
+                    case SignalType.PWM:
+                        GridDigital.Visibility = Visibility.Collapsed;
+                        GridAnalog.Visibility = Visibility.Collapsed;
+                        GridPWM.Visibility = Visibility.Visible;
+
+                        // SPWM_ValueChanged(null, null);
+                        break;
+                    case SignalType.UART:
+                        GridDigital.Visibility = Visibility.Collapsed;
+                        GridAnalog.Visibility = Visibility.Collapsed;
+                        GridPWM.Visibility = Visibility.Collapsed;
+                        break;
+                    case SignalType.SPI:
+                        GridDigital.Visibility = Visibility.Collapsed;
+                        GridAnalog.Visibility = Visibility.Collapsed;
+                        GridPWM.Visibility = Visibility.Collapsed;
+                        break;
+                    case SignalType.I2C:
+                        GridDigital.Visibility = Visibility.Collapsed;
+                        GridAnalog.Visibility = Visibility.Collapsed;
+                        GridPWM.Visibility = Visibility.Collapsed;
+                        break;
+                    case SignalType.PS2:
+                        GridDigital.Visibility = Visibility.Collapsed;
+                        GridAnalog.Visibility = Visibility.Collapsed;
+                        GridPWM.Visibility = Visibility.Collapsed;
+                        break;
+                    case SignalType.VGA:
+                        GridDigital.Visibility = Visibility.Collapsed;
+                        GridAnalog.Visibility = Visibility.Collapsed;
+                        GridPWM.Visibility = Visibility.Collapsed;
+                        break;
+                }
+            }
+        }
+
+        private void PushPin()
+        {
+            if (!_queuePost.Contains(_currentPin))
+            {
+                _queuePost.Add(_currentPin);
+            }
+        }
+
+        private void UpdateDGPins()
+        {
+            var filteredPins = _pins.Where(pin => pin.SupportedSignals.Contains(_currentPin.SelectedType)).ToList();
+            DGPins.ItemsSource = filteredPins;
+        }
+
+        private void SAnalog_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_currentPin == null)
+            {
+                DGPins.SelectedIndex = 0;
+            }
+            _currentPin.SelectedType = SignalType.Analog;
+            _currentPin.Value = SAnalog.Value.ToString();
+
+            PushPin();
+            UpdateDGPins();
+            UpdatePinUI();
+        }
+
+        private void SPWM_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_currentPin == null)
+            {
+                DGPins.SelectedIndex = 0;
+            }
+            _currentPin.SelectedType = SignalType.PWM;
+            _currentPin.Value = SPWM.Value.ToString() + '%';
+
+            PushPin();
+            UpdateDGPins();
+            UpdatePinUI();
+        }
     }
 }
