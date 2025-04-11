@@ -13,6 +13,7 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Xml.Linq;
 
 namespace SignalCraftApp
 {
@@ -47,9 +48,11 @@ namespace SignalCraftApp
 
             // Инициализация пинов для платы DE10-Lite
             string jsonPath = @"Configurations\DE10Lite.json";
+            if (!File.Exists(jsonPath))
+                throw new FileNotFoundException("Конфигурация DE10-Lite не найдена.");
             string jsonContent = File.ReadAllText(jsonPath);
             _pins = JsonConvert.DeserializeObject<List<Pin>>(jsonContent);
-            CBType_SelectionChanged(null, null);
+            CBType_SelectionChanged(null, null); // ???
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -98,25 +101,6 @@ namespace SignalCraftApp
         private void DGPins_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _currentPin = DGPins.SelectedItem as Pin;
-            UpdatePinUI();
-
-            if (_currentPin != null && _currentPin.Value != "")
-                SAnalog.Value = int.Parse(_currentPin.Value);
-            else
-                SAnalog.Value = 0;
-        }
-
-        private void BtnBinary_Click(object sender, RoutedEventArgs e)
-        {
-            if(_currentPin == null)
-            {
-                DGPins.SelectedIndex = 0;
-            }
-            _currentPin.SelectedType = SignalType.Digital;
-            _currentPin.Value = (sender as Button).Content.ToString();
-
-            PushPin();
-            UpdateDGPins();
             UpdatePinUI();
         }
 
@@ -178,7 +162,7 @@ namespace SignalCraftApp
                     }
 
                     byte[] data = new byte[3];
-                    data[0] = (byte)pin.Id; 
+                    data[0] = (byte)pin.Id;
                     data[1] = analogBytes[0];
                     data[2] = analogBytes[1];
 
@@ -204,6 +188,97 @@ namespace SignalCraftApp
                 }
             }
 
+            // UART сигнал
+            var uartPins = _queuePost.Where(p => p.SelectedType == SignalType.UART);
+            if (uartPins != null && uartPins.Any())
+            {
+                foreach (Pin pin in uartPins)
+                {
+                    string hexText = pin.Value.Replace(" ", "").ToLower();
+
+                    byte[] data = new byte[hexText.Length / 2 + 1];
+                    data[0] = (byte)pin.Id;
+
+                    for (int i = 0; i < hexText.Length / 2; i++)
+                    {
+                        string byteValue = hexText.Substring(i * 2, 2);
+                        data[i + 1] = Convert.ToByte(byteValue, 16);
+                    }
+
+                    Packet uartPacket = new Packet(0x04, 0x00, 0x00, data);
+                    string res = SendPacket(uartPacket);
+                    _logManager.Log(uartPacket.ToString(), false, res);
+                }
+            }
+
+            // SPI сигнал
+            var spiPins = _queuePost.Where(p => p.SelectedType == SignalType.SPI);
+            if (spiPins != null && spiPins.Any())
+            {
+                foreach (Pin pin in spiPins)
+                {
+                    string hexText = pin.Value.Replace(" ", "").ToLower();
+
+                    byte[] data = new byte[hexText.Length / 2 + 1];
+                    data[0] = (byte)pin.Id;
+
+                    for (int i = 0; i < hexText.Length / 2; i++)
+                    {
+                        string byteValue = hexText.Substring(i * 2, 2);
+                        data[i + 1] = Convert.ToByte(byteValue, 16);
+                    }
+
+                    Packet spiPacket = new Packet(0x05, 0x00, 0x00, data);
+                    string res = SendPacket(spiPacket);
+                    _logManager.Log(spiPacket.ToString(), false, res);
+                }
+            }
+
+            // I2C сигнал
+            var i2cPins = _queuePost.Where(p => p.SelectedType == SignalType.I2C);
+            if (i2cPins != null && i2cPins.Any())
+            {
+                foreach (Pin pin in i2cPins)
+                {
+                    string hexText = pin.Value.Replace(" ", "").ToLower();
+
+                    byte[] data = new byte[hexText.Length / 2 + 1];
+                    data[0] = (byte)pin.Id;
+
+                    for (int i = 0; i < hexText.Length / 2; i++)
+                    {
+                        string byteValue = hexText.Substring(i * 2, 2);
+                        data[i + 1] = Convert.ToByte(byteValue, 16);
+                    }
+
+                    Packet i2cPacket = new Packet(0x06, 0x00, 0x00, data);
+                    string res = SendPacket(i2cPacket);
+                    _logManager.Log(i2cPacket.ToString(), false, res);
+                }
+            }
+
+            // PS2 сигнал
+            var ps2Pins = _queuePost.Where(p => p.SelectedType == SignalType.PS2);
+            if (ps2Pins != null && ps2Pins.Any())
+            {
+                foreach (Pin pin in ps2Pins)
+                {
+                    string hexText = pin.Value.Replace(" ", "").ToLower();
+
+                    byte[] data = new byte[hexText.Length / 2 + 1];
+                    data[0] = (byte)pin.Id;
+
+                    for (int i = 0; i < hexText.Length / 2; i++)
+                    {
+                        string byteValue = hexText.Substring(i * 2, 2);
+                        data[i + 1] = Convert.ToByte(byteValue, 16);
+                    }
+
+                    Packet ps2Packet = new Packet(0x07, 0x00, 0x00, data);
+                    string res = SendPacket(ps2Packet);
+                    _logManager.Log(ps2Packet.ToString(), false, res);
+                }
+            }
             _queuePost.Clear();
             BtnSet.IsEnabled = true;
         }
@@ -405,58 +480,95 @@ namespace SignalCraftApp
 
         private void CBType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_pins != null && CBType.SelectedItem is SignalType selectedType)
+            if (_pins != null)
             {
-                var filteredPins = _pins.Where(pin => pin.SupportedSignals.Contains(selectedType)).ToList();
-                DGPins.ItemsSource = filteredPins;
-
-                switch (selectedType)
+                UpdateDGPins();
+                DGPins.SelectedIndex = 0;
+                switch (CBType.SelectedItem)
                 {
                     case SignalType.Digital:
                         GridDigital.Visibility = Visibility.Visible;
                         GridAnalog.Visibility = Visibility.Collapsed;
                         GridPWM.Visibility = Visibility.Collapsed;
+                        GridUART.Visibility = Visibility.Collapsed;
+                        GridSPI.Visibility = Visibility.Collapsed;
+                        GridI2C.Visibility = Visibility.Collapsed;
+                        GridPS2.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.Analog:
                         GridDigital.Visibility = Visibility.Collapsed;
                         GridAnalog.Visibility = Visibility.Visible;
                         GridPWM.Visibility = Visibility.Collapsed;
-
-                        // SAnalog_ValueChanged(null, null);
+                        GridUART.Visibility = Visibility.Collapsed;
+                        GridSPI.Visibility = Visibility.Collapsed;
+                        GridI2C.Visibility = Visibility.Collapsed;
+                        GridPS2.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.PWM:
                         GridDigital.Visibility = Visibility.Collapsed;
                         GridAnalog.Visibility = Visibility.Collapsed;
                         GridPWM.Visibility = Visibility.Visible;
-
-                        // SPWM_ValueChanged(null, null);
+                        GridUART.Visibility = Visibility.Collapsed;
+                        GridSPI.Visibility = Visibility.Collapsed;
+                        GridI2C.Visibility = Visibility.Collapsed;
+                        GridPS2.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.UART:
                         GridDigital.Visibility = Visibility.Collapsed;
                         GridAnalog.Visibility = Visibility.Collapsed;
                         GridPWM.Visibility = Visibility.Collapsed;
+                        GridUART.Visibility = Visibility.Visible;
+                        GridSPI.Visibility = Visibility.Collapsed;
+                        GridI2C.Visibility = Visibility.Collapsed;
+                        GridPS2.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.SPI:
                         GridDigital.Visibility = Visibility.Collapsed;
                         GridAnalog.Visibility = Visibility.Collapsed;
                         GridPWM.Visibility = Visibility.Collapsed;
+                        GridUART.Visibility = Visibility.Collapsed;
+                        GridSPI.Visibility = Visibility.Visible;
+                        GridI2C.Visibility = Visibility.Collapsed;
+                        GridPS2.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.I2C:
                         GridDigital.Visibility = Visibility.Collapsed;
                         GridAnalog.Visibility = Visibility.Collapsed;
                         GridPWM.Visibility = Visibility.Collapsed;
+                        GridUART.Visibility = Visibility.Collapsed;
+                        GridSPI.Visibility = Visibility.Collapsed;
+                        GridI2C.Visibility = Visibility.Visible;
+                        GridPS2.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.PS2:
                         GridDigital.Visibility = Visibility.Collapsed;
                         GridAnalog.Visibility = Visibility.Collapsed;
                         GridPWM.Visibility = Visibility.Collapsed;
+                        GridUART.Visibility = Visibility.Collapsed;
+                        GridSPI.Visibility = Visibility.Collapsed;
+                        GridI2C.Visibility = Visibility.Collapsed;
+                        GridPS2.Visibility = Visibility.Visible;
                         break;
                     case SignalType.VGA:
                         GridDigital.Visibility = Visibility.Collapsed;
                         GridAnalog.Visibility = Visibility.Collapsed;
                         GridPWM.Visibility = Visibility.Collapsed;
+                        GridUART.Visibility = Visibility.Collapsed;
+                        GridSPI.Visibility = Visibility.Collapsed;
+                        GridI2C.Visibility = Visibility.Collapsed;
+                        GridPS2.Visibility = Visibility.Collapsed;
                         break;
                 }
+            }
+        }
+
+        private void UpdateDGPins()
+        {
+            if (CBType.SelectedItem is SignalType type)
+            {
+                var filteredPins = _pins.Where(pin => pin.SupportedSignals.Contains(type)).ToList();
+                DGPins.ItemsSource = filteredPins;
+                DGPins.SelectedItem = _currentPin;
             }
         }
 
@@ -468,18 +580,18 @@ namespace SignalCraftApp
             }
         }
 
-        private void UpdateDGPins()
+        private void BtnBinary_Click(object sender, RoutedEventArgs e)
         {
-            var filteredPins = _pins.Where(pin => pin.SupportedSignals.Contains(_currentPin.SelectedType)).ToList();
-            DGPins.ItemsSource = filteredPins;
+            _currentPin.SelectedType = SignalType.Digital;
+            _currentPin.Value = (sender as Button).Content.ToString();
+
+            PushPin();
+            UpdateDGPins();
+            UpdatePinUI();
         }
 
         private void SAnalog_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_currentPin == null)
-            {
-                DGPins.SelectedIndex = 0;
-            }
             _currentPin.SelectedType = SignalType.Analog;
             _currentPin.Value = SAnalog.Value.ToString();
 
@@ -490,10 +602,6 @@ namespace SignalCraftApp
 
         private void SPWM_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (_currentPin == null)
-            {
-                DGPins.SelectedIndex = 0;
-            }
             _currentPin.SelectedType = SignalType.PWM;
             _currentPin.Value = SPWM.Value.ToString() + '%';
 
@@ -501,5 +609,111 @@ namespace SignalCraftApp
             UpdateDGPins();
             UpdatePinUI();
         }
+
+        private void BtnReset_Click(object sender, RoutedEventArgs e)
+        {
+            SAnalog.Value = 0;
+            SPWM.Value = 0;
+            TBUART.Clear();
+            TBSPI.Clear();
+            TBI2C.Clear();
+            TBPS2.Clear();
+            _queuePost.Clear();
+            Window_Loaded(null, null);
+        }
+
+        private void TBUART_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            try
+            {
+                string hexText = TBUART.Text.Replace(" ", "").ToLower();
+                if (System.Text.RegularExpressions.Regex.IsMatch(hexText, "^[0-9a-f]*$"))
+                {
+                    byte[] bytes = Enumerable.Range(0, hexText.Length)
+                        .Where(x => x % 2 == 0)
+                        .Select(x => Convert.ToByte(hexText.Substring(x, 2), 16))
+                        .ToArray();
+
+                    _currentPin.SelectedType = SignalType.UART;
+                    _currentPin.Value = TBUART.Text;
+
+                    PushPin();
+                    UpdateDGPins();
+                    UpdatePinUI();
+                }
+            }
+            catch { }
+        }
+
+        private void TBSPI_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            try
+            {
+                string hexText = TBSPI.Text.Replace(" ", "").ToLower();
+                if (System.Text.RegularExpressions.Regex.IsMatch(hexText, "^[0-9a-f]*$"))
+                {
+                    byte[] bytes = Enumerable.Range(0, hexText.Length)
+                        .Where(x => x % 2 == 0)
+                        .Select(x => Convert.ToByte(hexText.Substring(x, 2), 16))
+                        .ToArray();
+
+                    _currentPin.SelectedType = SignalType.UART;
+                    _currentPin.Value = TBSPI.Text;
+
+                    PushPin();
+                    UpdateDGPins();
+                    UpdatePinUI();
+                }
+            }
+            catch { }
+        }
+
+        private void TBI2C_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            try
+            {
+                string hexText = TBI2C.Text.Replace(" ", "").ToLower();
+                if (System.Text.RegularExpressions.Regex.IsMatch(hexText, "^[0-9a-f]*$"))
+                {
+                    byte[] bytes = Enumerable.Range(0, hexText.Length)
+                        .Where(x => x % 2 == 0)
+                        .Select(x => Convert.ToByte(hexText.Substring(x, 2), 16))
+                        .ToArray();
+
+                    _currentPin.SelectedType = SignalType.UART;
+                    _currentPin.Value = TBI2C.Text;
+
+                    PushPin();
+                    UpdateDGPins();
+                    UpdatePinUI();
+                }
+            }
+            catch { }
+        }
+
+        private void TBPS2_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            try
+            {
+                string hexText = TBPS2.Text.Replace(" ", "").ToLower();
+                if (System.Text.RegularExpressions.Regex.IsMatch(hexText, "^[0-9a-f]*$"))
+                {
+                    byte[] bytes = Enumerable.Range(0, hexText.Length)
+                        .Where(x => x % 2 == 0)
+                        .Select(x => Convert.ToByte(hexText.Substring(x, 2), 16))
+                        .ToArray();
+
+                    _currentPin.SelectedType = SignalType.UART;
+                    _currentPin.Value = TBPS2.Text;
+
+                    PushPin();
+                    UpdateDGPins();
+                    UpdatePinUI();
+                }
+            }
+            catch { }
+        }
     }
+
 }
+

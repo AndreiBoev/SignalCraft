@@ -123,7 +123,7 @@
                         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"  Color="LightGreen"/>
                     </DataGrid.Resources>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Binding="{Binding Name}" Header="Разъём" Width="80" />
+                        <DataGridTextColumn Binding="{Binding Name}" Header="Разъём" Width="85" />
                         <DataGridTextColumn Binding="{Binding SelectedTypeDescription}" Header="Тип" Width="100" />
                         <DataGridTextColumn Binding="{Binding Value}" Header="Значение" Width="*" />
                     </DataGrid.Columns>
@@ -172,7 +172,7 @@
                                     <TextBlock Text="Значение:" Width="90" TextAlignment="Right"></TextBlock>
                                     <TextBlock Text="{Binding Value}"></TextBlock>
                                 </StackPanel>
-                                <Slider Margin="5" Minimum="0" Maximum="1023" Name="SAnalog" IsSnapToTickEnabled="True"  TickFrequency="1" ValueChanged="SAnalog_ValueChanged"></Slider>
+                                <Slider Margin="5" Maximum="1023" Name="SAnalog" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SAnalog_ValueChanged"></Slider>
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Header="Настройка ШИМ сигнала" Name="GridPWM" Visibility="Collapsed">
@@ -189,7 +189,71 @@
                                     <TextBlock Text="Скважность:" Width="90" TextAlignment="Right"></TextBlock>
                                     <TextBlock Text="{Binding Value}"></TextBlock>
                                 </StackPanel>
-                                <Slider Margin="5" Maximum="100" Name="SPWM" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SPWM_ValueChanged"></Slider>
+                                <Slider Margin="5" Maximum="100" Name="SPWM" TickFrequency=".1" IsSnapToTickEnabled="True" ValueChanged="SPWM_ValueChanged"></Slider>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Настройка UART сигнала" Name="GridUART" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBox Width="150" Name="TBUART" TextChanged="TBUART_TextChanged"></TextBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Настройка UART сигнала" Name="GridSPI" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBox Width="150" Name="TBSPI" TextChanged="TBSPI_TextChanged"></TextBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Настройка I2C сигнала" Name="GridI2C" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBox Width="150" Name="TBI2C" TextChanged="TBI2C_TextChanged"></TextBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Настройка I2C сигнала" Name="GridPS2" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBox Width="150" Name="TBPS2" TextChanged="TBPS2_TextChanged"></TextBox>
+                                </StackPanel>
                             </StackPanel>
                         </GroupBox>
                     </StackPanel>
@@ -199,7 +263,7 @@
                                 <ColumnDefinition Width="*"></ColumnDefinition>
                                 <ColumnDefinition Width="*"></ColumnDefinition>
                             </Grid.ColumnDefinitions>
-                            <Button Content="Сбросить всё ↻" Name="BtnReset" Grid.Column="0" Width="auto"></Button>
+                            <Button Content="Сбросить всё ↻" Name="BtnReset" Grid.Column="0" Width="auto" Click="BtnReset_Click"></Button>
                             <Button  Content="Установить ✔" FontWeight="UltraBold"  Name="BtnSet" Click="BtnSet_Click" Width="auto" Grid.Column="1"></Button>
                         </Grid>
                         <Grid Grid.Row="2">
