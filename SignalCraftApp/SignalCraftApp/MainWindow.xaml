@@ -5,11 +5,216 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SignalCraftApp"
         mc:Ignorable="d"
-        WindowState="Maximized"
-        WindowStyle="None"
-        ResizeMode="NoResize"
-        Height="450" Width="800">
-    <Grid>
+        WindowState="Maximized" Title="SignalCraft" Icon="/Resources/Logo.jpg"
+        Height="1080" Width="1920" Loaded="Window_Loaded" Closed="Window_Closed">
 
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="400"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="600"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Row="0" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <GroupBox Header="COM-порт">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox Name="CBPorts" Width="115"></ComboBox>
+                            <Button Background="White" Width="30" Height="30" Name="BtnUpdatePorts" Click="BtnUpdatePorts_Click" Margin="0 5 5 5">
+                                <Image Source="/Resources/Icons/Update.png" Margin="0" Width="25" Height="25"></Image>
+                            </Button>
+                        </StackPanel>
+                        <ComboBox Name="CBSpeed" SelectedIndex="4">
+                            <ComboBoxItem Content="300"></ComboBoxItem>
+                            <ComboBoxItem Content="1200"></ComboBoxItem>
+                            <ComboBoxItem Content="2400"></ComboBoxItem>
+                            <ComboBoxItem Content="4800"></ComboBoxItem>
+                            <ComboBoxItem Content="9600"></ComboBoxItem>
+                            <ComboBoxItem Content="19200"></ComboBoxItem>
+                            <ComboBoxItem Content="38400"></ComboBoxItem>
+                            <ComboBoxItem Content="57600"></ComboBoxItem>
+                            <ComboBoxItem Content="74880"></ComboBoxItem>
+                            <ComboBoxItem Content="115200"></ComboBoxItem>
+                            <ComboBoxItem Content="230400"></ComboBoxItem>
+                            <ComboBoxItem Content="250000"></ComboBoxItem>
+                            <ComboBoxItem Content="500000"></ComboBoxItem>
+                            <ComboBoxItem Content="1000000"></ComboBoxItem>
+                            <ComboBoxItem Content="2000000"></ComboBoxItem>
+                        </ComboBox>
+                        <Button Name="BtnAction" Click="BtnAction_Click" Background="White">
+                            <Image Source="/Resources/Icons/Start.png" Width="25" Height="25" Margin="0"></Image>
+                        </Button>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox Header="Среды разработки">
+                    <StackPanel>
+                        <Button Content="Quartus Prime" Click="BtnProg_Click"></Button>
+                        <Button Content="Arduino IDE" Click="BtnProg_Click"></Button>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+            <GroupBox Header="DE10 Lite" Grid.Column="1">
+                <Image Source="/Resources/Board.png" Margin="0" Grid.Column="0"></Image>
+            </GroupBox>
+        </Grid>
+        <GroupBox Grid.Column="2" Grid.Row="0" Header="Камера">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="auto"></RowDefinition>
+                    <RowDefinition Height="*"></RowDefinition>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Grid.Row="0">
+                    <TextBlock Text="Выберите камеру:"/>
+                    <ComboBox Name="CBCameras" Width="170"></ComboBox>
+                    <Button Width="140" Height="30" Background="White" Name="BtnCamStartAndStop" Click="BtnCamStartAndStop_Click">
+                        <Image Source="/Resources/Icons/Start.png" Width="25" Height="25" Margin="0"></Image>
+                    </Button>
+                    <Button Width="30" Height="30" Background="White" Name="BtnSearchCameras" Click="BtnSearchCameras_Click">
+                        <Image Source="/Resources/Icons/Update.png" Width="25" Height="25" Margin="0"></Image>
+                    </Button>
+                    <Button Width="30" Height="30" Background="White" IsEnabled="False" Name="BtnDownload" Click="BtnDownload_Click">
+                        <Image Source="/Resources/Icons/Download.png" Width="25" Height="25" Margin="0"></Image>
+                    </Button>
+                    <Button Width="30" Height="30" Background="White" Name="BtnFullScreen" Click="BtnFullScreen_Click">
+                        <Image Width="25" Height="25" Margin="0" Source="/Resources/Icons/FullScreen.png"></Image>
+                    </Button>
+                </StackPanel>
+                <Border Background="LightGray" Grid.Row="1" CornerRadius="8" Margin="5">
+                    <Image Name="ImCamera" Source="/Resources/Icons/Camera.png" Margin="0"></Image>
+                </Border>
+            </Grid>
+        </GroupBox>
+        <GroupBox Grid.Row="1" Grid.Column="1" Header="Лог-журнал">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"></RowDefinition>
+                    <RowDefinition Height="auto"></RowDefinition>
+                </Grid.RowDefinitions>
+                <TextBox HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Name="TBData" IsReadOnly="True" Margin="5 5 5 0" Grid.Row="0"></TextBox>
+                <Grid Grid.Row="2">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Число пакетов:"></TextBlock>
+                        <TextBlock Name="TBlockCount" Margin="0 5 5 5" Width="30">0</TextBlock>
+                        <CheckBox Content="Автопрокрутка" IsChecked="True" Name="CBAutoScroll"></CheckBox>
+                    </StackPanel>
+                    <Button Content="Очистить вывод" Background="White" Name="BtnClear" HorizontalAlignment="Right" Click="BtnClear_Click"></Button>
+                </Grid>
+            </Grid>
+        </GroupBox>
+        <GroupBox Grid.Row="1" Grid.Column="0" Header="Генерация сигнала" IsEnabled="False" Name="GBGeneration">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="400"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <DataGrid Grid.Column="0" Margin="5" IsReadOnly="True" Name="DGPins" AutoGenerateColumns="False" SelectionChanged="DGPins_SelectionChanged" SelectedIndex="0" HorizontalContentAlignment="Center">
+                    <DataGrid.Resources>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        </Style>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"  Color="LightGreen"/>
+                    </DataGrid.Resources>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Binding="{Binding Name}" Header="Разъём" Width="80" />
+                        <DataGridTextColumn Binding="{Binding SelectedTypeDescription}" Header="Тип" Width="100" />
+                        <DataGridTextColumn Binding="{Binding Value}" Header="Значение" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"></RowDefinition>
+                        <RowDefinition Height="auto"></RowDefinition>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Тип сигнала:"></TextBlock>
+                            <ComboBox SelectedIndex="0" Name="CBType" SelectionChanged="CBType_SelectionChanged"></ComboBox>
+                        </StackPanel>
+                        <GroupBox Header="Настройка бинарного сигнала" Name="GridDigital">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Значение:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Value}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Content="0" Width="235" Click="BtnBinary_Click"></Button>
+                                    <Button Content="1" Width="235" Click="BtnBinary_Click"></Button>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Настройка аналогового сигнала" Name="GridAnalog" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Значение:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Value}"></TextBlock>
+                                </StackPanel>
+                                <Slider Margin="5" Minimum="0" Maximum="1023" Name="SAnalog" IsSnapToTickEnabled="True"  TickFrequency="1" ValueChanged="SAnalog_ValueChanged"></Slider>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Настройка ШИМ сигнала" Name="GridPWM" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Скважность:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Value}"></TextBlock>
+                                </StackPanel>
+                                <Slider Margin="5" Maximum="100" Name="SPWM" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="SPWM_ValueChanged"></Slider>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                    <StackPanel Grid.Row="2">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"></ColumnDefinition>
+                                <ColumnDefinition Width="*"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <Button Content="Сбросить всё ↻" Name="BtnReset" Grid.Column="0" Width="auto"></Button>
+                            <Button  Content="Установить ✔" FontWeight="UltraBold"  Name="BtnSet" Click="BtnSet_Click" Width="auto" Grid.Column="1"></Button>
+                        </Grid>
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"></ColumnDefinition>
+                                <ColumnDefinition Width="auto"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" Name="TBSend" KeyUp="TBSend_KeyUp"></TextBox>
+                            <Button Background="White" Grid.Column="1" Width="30" Height="30" Name="BtnSend" Click="BtnSend_Click" Margin="0 5 5 5">
+                                <Image Source="/Resources/Icons/Send.png" Width="25" Height="25" Margin="0"></Image>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </GroupBox>
     </Grid>
 </Window>

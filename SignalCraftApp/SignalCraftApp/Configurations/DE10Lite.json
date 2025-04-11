@@ -1,0 +1,254 @@
+[
+  {
+    "Id": 0,
+    "Name": "GPIO_[0]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 1,
+    "Name": "GPIO_[1]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "PWM" ]
+  },
+  {
+    "Id": 2,
+    "Name": "GPIO_[2]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 3,
+    "Name": "GPIO_[3]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 4,
+    "Name": "GPIO_[4]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 5,
+    "Name": "GPIO_[5]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "VGA" ]
+  },
+  {
+    "Id": 6,
+    "Name": "GPIO_[6]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "VGA" ]
+  },
+  {
+    "Id": 7,
+    "Name": "GPIO_[7]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "VGA" ]
+  },
+  {
+    "Id": 8,
+    "Name": "GPIO_[8]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "I2C" ]
+  },
+  {
+    "Id": 9,
+    "Name": "GPIO_[9]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "I2C" ]
+  },
+  {
+    "Id": 10,
+    "Name": "GPIO_[10]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "VGA" ]
+  },
+  {
+    "Id": 11,
+    "Name": "GPIO_[11]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "VGA" ]
+  },
+  {
+    "Id": 12,
+    "Name": "GPIO_[12]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "PS2" ]
+  },
+  {
+    "Id": 13,
+    "Name": "GPIO_[13]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 14,
+    "Name": "GPIO_[14]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "PS2" ]
+  },
+  {
+    "Id": 15,
+    "Name": "GPIO_[15]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "UART" ]
+  },
+  {
+    "Id": 16,
+    "Name": "GPIO_[16]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "UART", "Digital" ]
+  },
+  {
+    "Id": 17,
+    "Name": "GPIO_[17]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "SPI" ]
+  },
+  {
+    "Id": 18,
+    "Name": "GPIO_[18]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "SPI", "Digital" ]
+  },
+  {
+    "Id": 19,
+    "Name": "GPIO_[19]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "SPI" ]
+  },
+  {
+    "Id": 20,
+    "Name": "GPIO_[20]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 21,
+    "Name": "GPIO_[21]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 22,
+    "Name": "GPIO_[22]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 23,
+    "Name": "GPIO_[23]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 24,
+    "Name": "GPIO_[24]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 25,
+    "Name": "GPIO_[25]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 26,
+    "Name": "GPIO_[26]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 27,
+    "Name": "GPIO_[27]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Analog" ]
+  },
+  {
+    "Id": 28,
+    "Name": "GPIO_[28]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 29,
+    "Name": "GPIO_[29]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 30,
+    "Name": "GPIO_[30]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 31,
+    "Name": "GPIO_[31]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Analog" ]
+  },
+  {
+    "Id": 32,
+    "Name": "GPIO_[32]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 33,
+    "Name": "GPIO_[33]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 34,
+    "Name": "GPIO_[34]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  },
+  {
+    "Id": 35,
+    "Name": "GPIO_[35]",
+    "SelectedType": "None",
+    "Value": "",
+    "SupportedSignals": [ "Digital" ]
+  }
+]
