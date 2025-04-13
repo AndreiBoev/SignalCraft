@@ -1,0 +1,8 @@
+﻿<Window x:Class="SignalCraftApp.FullScreenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" WindowState="Maximized" Background="Black">
+    <Grid>
+        <Image Name="FullScreenImage" Stretch="Uniform" Source="{Binding ImageSource}"></Image>
+    </Grid>
+</Window>

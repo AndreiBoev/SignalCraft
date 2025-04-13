@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:SignalCraftApp"
         mc:Ignorable="d"
         WindowState="Maximized" Title="SignalCraft" Icon="/Resources/Logo.jpg"
-        Height="1080" Width="1920" Loaded="Window_Loaded" Closed="Window_Closed">
+        Height="1080" Width="1920" MinWidth="1400" Loaded="Window_Loaded" Closed="Window_Closed" >
 
     <Grid>
         <Grid.RowDefinitions>
@@ -49,7 +49,7 @@
                             <ComboBoxItem Content="1000000"></ComboBoxItem>
                             <ComboBoxItem Content="2000000"></ComboBoxItem>
                         </ComboBox>
-                        <Button Name="BtnAction" Click="BtnAction_Click" Background="White">
+                        <Button Name="BtnAction" BorderBrush="Coral" Click="BtnAction_Click">
                             <Image Source="/Resources/Icons/Start.png" Width="25" Height="25" Margin="0"></Image>
                         </Button>
                     </StackPanel>
@@ -58,6 +58,9 @@
                     <StackPanel>
                         <Button Content="Quartus Prime" Click="BtnProg_Click"></Button>
                         <Button Content="Arduino IDE" Click="BtnProg_Click"></Button>
+                        <Button Name="BtnSettings" Click="BtnSettings_Click">
+                            <Image Source="/Resources/Icons/Settings.png" Width="25" Height="25" Margin="0"></Image>
+                        </Button>
                     </StackPanel>
                 </GroupBox>
             </StackPanel>
@@ -203,7 +206,7 @@
                                     <TextBlock Text="{Binding SelectedType}"></TextBlock>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="Данные:" Width="90" TextAlignment="Right"></TextBlock>
                                     <TextBox Width="150" Name="TBUART" TextChanged="TBUART_TextChanged"></TextBox>
                                 </StackPanel>
                             </StackPanel>
@@ -219,7 +222,7 @@
                                     <TextBlock Text="{Binding SelectedType}"></TextBlock>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="Данные:" Width="90" TextAlignment="Right"></TextBlock>
                                     <TextBox Width="150" Name="TBSPI" TextChanged="TBSPI_TextChanged"></TextBox>
                                 </StackPanel>
                             </StackPanel>
@@ -235,7 +238,7 @@
                                     <TextBlock Text="{Binding SelectedType}"></TextBlock>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="Данные:" Width="90" TextAlignment="Right"></TextBlock>
                                     <TextBox Width="150" Name="TBI2C" TextChanged="TBI2C_TextChanged"></TextBox>
                                 </StackPanel>
                             </StackPanel>
@@ -251,8 +254,34 @@
                                     <TextBlock Text="{Binding SelectedType}"></TextBlock>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Данные :" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="Данные:" Width="90" TextAlignment="Right"></TextBlock>
                                     <TextBox Width="150" Name="TBPS2" TextChanged="TBPS2_TextChanged"></TextBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Настройка VGA сигнала" Name="GridVGA" Visibility="Collapsed">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Разъём:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding Name}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Тип сигнала:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Text="{Binding SelectedType}"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Картинка:" Width="90" TextAlignment="Right"></TextBlock>
+                                    <TextBlock Width="150" Name="TBlockVGA"></TextBlock>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <StackPanel>
+                                        <Button Content="Выбрать файл" Name="BtnLoadImage" Click="BtnLoadImage_Click" Width="200"></Button>
+                                        <TextBlock TextAlignment="Justify" TextWrapping="Wrap" Width="200" HorizontalAlignment="Left" FontSize="10">
+     <Run Text="*Важно:" FontWeight="Bold"/>
+     <Run Text="VGA порт занимает весь функционал МК. Все остальные настройки сигналов будут проигнорированы."/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <Image Name="ImgPreview" Height="100" HorizontalAlignment="Right"></Image>
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>

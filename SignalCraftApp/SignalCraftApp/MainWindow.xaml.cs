@@ -23,6 +23,7 @@ namespace SignalCraftApp
         private List<Pin> _pins;
         private Pin _currentPin;
         private List<Pin> _queuePost = new List<Pin>();
+        private FullScreenWindow fullScreenWindow;
 
         private const string CameraImagePath = @"/Resources/Icons/Camera.png";
         private const string StartImagePath = @"/Resources/Icons/Start.png";
@@ -40,7 +41,7 @@ namespace SignalCraftApp
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            _cameraManager = new CameraManager(CBCameras);
+            _cameraManager = new CameraManager(CBCameras, UpdateCameraImage);
             BtnUpdatePorts_Click(null, null);
             _serialManager.DataReceived += DataReceivedHandler;
 
@@ -88,7 +89,8 @@ namespace SignalCraftApp
             UpdateButtonState(BtnCamStartAndStop, isRunningCamera, StartImagePath, StopImagePath);
             if (!isRunningCamera)
             {
-                ImCamera.Source = new BitmapImage(new Uri(CameraImagePath, UriKind.RelativeOrAbsolute));
+                var newImageSource = new BitmapImage(new Uri(CameraImagePath, UriKind.RelativeOrAbsolute));
+                ImCamera.Source = newImageSource;
             }
         }
 
@@ -126,9 +128,50 @@ namespace SignalCraftApp
 
         }
 
+        private byte[] BitmapSourceToByteArray(string imagePath)
+        {
+            BitmapImage bitmapImage = new BitmapImage(new Uri(imagePath));
+            JpegBitmapEncoder encoder = new JpegBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmapImage));
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                encoder.Save(ms);
+                return ms.ToArray();
+            }
+        }
+
+        private void UpdateCameraImage(ImageSource newImageSource)
+        {
+            ImCamera.Source = newImageSource;
+            if (fullScreenWindow != null)
+            {
+                fullScreenWindow.ImageSource = newImageSource;
+            }
+        }
+
         private void BtnSet_Click(object sender, RoutedEventArgs e)
         {
             BtnSet.IsEnabled = false;
+
+            // VGA cигнал
+            var vgaPin = _queuePost.FirstOrDefault(p => p.SelectedType == SignalType.VGA);
+            if (vgaPin != null)
+            {
+                byte[] imageData = BitmapSourceToByteArray(vgaPin.Value);
+
+                byte[] data = new byte[imageData.Length + 1];
+                data[0] = (byte)vgaPin.Id;
+                Array.Copy(imageData, 0, data, 1, imageData.Length);
+
+                Packet vgaPacket = new Packet(0x08, 0x00, 0x00, data);
+                string res = SendPacket(vgaPacket);
+                _logManager.Log(vgaPacket.ToString(), false, res);
+
+                _queuePost.Remove(vgaPin);
+                BtnSet.IsEnabled = true;
+                return;
+            }
 
             // Дискретный сигнал
             var digitalPins = _queuePost.Where(p => p.SelectedType == SignalType.Digital);
@@ -376,6 +419,7 @@ namespace SignalCraftApp
 
             _cameraManager.StartCamera(CBCameras.SelectedIndex, ImCamera);
             UpdateUI();
+            UpdateUI();
         }
 
         private async void BtnDownload_Click(object sender, RoutedEventArgs e)
@@ -398,10 +442,16 @@ namespace SignalCraftApp
 
                     try
                     {
-                        using (FileStream fileStream = new FileStream(filePath, FileMode.Create))
+                        await Task.Run(() =>
                         {
-                            await Task.Run(() => encoder.Save(fileStream));
-                        }
+                            Application.Current.Dispatcher.Invoke(() =>
+                            {
+                                using (FileStream fileStream = new FileStream(filePath, FileMode.Create))
+                                {
+                                    encoder.Save(fileStream);
+                                }
+                            });
+                        });
                         MessageBox.Show("Изображение успешно сохранено!", "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     catch (Exception ex)
@@ -411,6 +461,7 @@ namespace SignalCraftApp
                 }
             }
         }
+
 
         private BitmapEncoder GetEncoder(string filePath)
         {
@@ -427,55 +478,50 @@ namespace SignalCraftApp
 
         private void BtnSearchCameras_Click(object sender, RoutedEventArgs e)
         {
-            _cameraManager = new CameraManager(CBCameras);
+            _cameraManager = new CameraManager(CBCameras, UpdateCameraImage);
         }
 
         private void BtnProg_Click(object sender, RoutedEventArgs e)
         {
-            if ((sender as Button).Content.ToString() == "Arduino IDE")
-            {
-                string arduinoIdePath = GetArduinoIdePath();
+            string idePath = string.Empty;
+            string ideName = (sender as Button).Content.ToString();
 
-                try
+            if (ideName == "Arduino IDE")
+            {
+                idePath = Properties.Settings.Default.ArduinoPath;
+            }
+            else if (ideName == "Quartus Prime")
+            {
+                idePath = Properties.Settings.Default.QuartusPath;
+            }
+
+            try
+            {
+                if (File.Exists(idePath))
                 {
-                    if (File.Exists(arduinoIdePath))
-                    {
-                        Process.Start(arduinoIdePath);
-                        MessageBox.Show("Arduino IDE запущена.");
-                    }
-                    else
-                    {
-                        MessageBox.Show("Arduino IDE не найдена. Проверьте установку.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
+                    Process.Start(idePath);
+                    MessageBox.Show($"{ideName} запущена.");
                 }
-                catch (Exception ex)
+                else
                 {
-                    MessageBox.Show($"Ошибка при запуске Arduino IDE: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"{ideName} не найдена. Проверьте установку.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("Данный функционал ещё не реализован.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Ошибка при запуске {ideName}: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-        }
-
-        private string GetArduinoIdePath()
-        {
-            string programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            string arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
-
-            if (!File.Exists(arduinoIdePath))
-            {
-                programFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-                arduinoIdePath = Path.Combine(programFilesPath, "Arduino", "arduino.exe");
-            }
-
-            return arduinoIdePath;
         }
 
         private void BtnFullScreen_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Данный функционал ещё не реализован.");
+            if (fullScreenWindow == null)
+            {
+                fullScreenWindow = new FullScreenWindow();
+                fullScreenWindow.Closed += (s, args) => fullScreenWindow = null;
+                fullScreenWindow.Show();
+            }
+            fullScreenWindow.ImageSource = ImCamera.Source;
         }
 
         private void CBType_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -494,6 +540,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Collapsed;
                         GridI2C.Visibility = Visibility.Collapsed;
                         GridPS2.Visibility = Visibility.Collapsed;
+                        GridVGA.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.Analog:
                         GridDigital.Visibility = Visibility.Collapsed;
@@ -503,6 +550,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Collapsed;
                         GridI2C.Visibility = Visibility.Collapsed;
                         GridPS2.Visibility = Visibility.Collapsed;
+                        GridVGA.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.PWM:
                         GridDigital.Visibility = Visibility.Collapsed;
@@ -512,6 +560,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Collapsed;
                         GridI2C.Visibility = Visibility.Collapsed;
                         GridPS2.Visibility = Visibility.Collapsed;
+                        GridVGA.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.UART:
                         GridDigital.Visibility = Visibility.Collapsed;
@@ -521,6 +570,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Collapsed;
                         GridI2C.Visibility = Visibility.Collapsed;
                         GridPS2.Visibility = Visibility.Collapsed;
+                        GridVGA.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.SPI:
                         GridDigital.Visibility = Visibility.Collapsed;
@@ -530,6 +580,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Visible;
                         GridI2C.Visibility = Visibility.Collapsed;
                         GridPS2.Visibility = Visibility.Collapsed;
+                        GridVGA.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.I2C:
                         GridDigital.Visibility = Visibility.Collapsed;
@@ -539,6 +590,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Collapsed;
                         GridI2C.Visibility = Visibility.Visible;
                         GridPS2.Visibility = Visibility.Collapsed;
+                        GridVGA.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.PS2:
                         GridDigital.Visibility = Visibility.Collapsed;
@@ -548,6 +600,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Collapsed;
                         GridI2C.Visibility = Visibility.Collapsed;
                         GridPS2.Visibility = Visibility.Visible;
+                        GridVGA.Visibility = Visibility.Collapsed;
                         break;
                     case SignalType.VGA:
                         GridDigital.Visibility = Visibility.Collapsed;
@@ -557,6 +610,7 @@ namespace SignalCraftApp
                         GridSPI.Visibility = Visibility.Collapsed;
                         GridI2C.Visibility = Visibility.Collapsed;
                         GridPS2.Visibility = Visibility.Collapsed;
+                        GridVGA.Visibility = Visibility.Visible;
                         break;
                 }
             }
@@ -618,6 +672,8 @@ namespace SignalCraftApp
             TBSPI.Clear();
             TBI2C.Clear();
             TBPS2.Clear();
+            TBlockVGA.Text = "";
+            ImgPreview.Source = null;
             _queuePost.Clear();
             Window_Loaded(null, null);
         }
@@ -712,6 +768,45 @@ namespace SignalCraftApp
                 }
             }
             catch { }
+        }
+
+
+        private void BtnLoadImage_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Image Files (*.bmp;*.jpg;*.png)|*.bmp;*.jpg;*.png",
+                Title = "Select an Image File"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var bitmap = new BitmapImage(new Uri(openFileDialog.FileName));
+                    ImgPreview.Source = bitmap;
+                    TBlockVGA.Text = openFileDialog.FileName;
+
+                    _currentPin.SelectedType = SignalType.VGA;
+                    _currentPin.Value = openFileDialog.FileName;
+                    PushPin();
+                    UpdateDGPins();
+                    UpdatePinUI();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading image: {ex.Message}", "Error",
+                                   MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void BtnSettings_Click(object sender, RoutedEventArgs e)
+        {
+            SettingsWindow settingsWindow = new SettingsWindow();
+            settingsWindow.Owner = this;
+            settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            settingsWindow.ShowDialog();
         }
     }
 

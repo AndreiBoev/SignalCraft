@@ -14,10 +14,12 @@ namespace SignalCraftApp
         private FilterInfoCollection _videoDevices;
         private VideoCaptureDevice _videoSource;
         private Dispatcher _dispatcher;
+        private Action<System.Windows.Media.ImageSource> _updateImageAction;
 
-        public CameraManager(ComboBox comboBox)
+        public CameraManager(ComboBox comboBox, Action<System.Windows.Media.ImageSource> updateImageAction)
         {
             _dispatcher = Dispatcher.CurrentDispatcher;
+            _updateImageAction = updateImageAction;
             InitializeCameras(comboBox);
         }
 
@@ -90,6 +92,7 @@ namespace SignalCraftApp
                         BitmapSizeOptions.FromEmptyOptions());
 
                     cameraImage.Source = bitmapSource;
+                    _updateImageAction?.Invoke(bitmapSource);
                 }
                 finally
                 {
@@ -99,3 +102,4 @@ namespace SignalCraftApp
         }
     }
 }
+
